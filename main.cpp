@@ -5,11 +5,16 @@
 #include <math.h>
 #include <stdlib.h>  
 #include <array>
-#include "vector2.h"
-#include "triangle.h"
-#include "delaunay.h"
+#include "eigen3/Eigen/Eigen"
 
-float RandomFloat(float a, float b) {
+#include "edge.h"
+//#include "vector2.h"
+#include "triangle.h"
+//#include "delaunay.h"
+
+// generate a random number between a and b
+float RandomFloat(float a, float b)
+{
     float random = ((float) rand()) / (float) RAND_MAX;
     float diff = b - a;
     float r = random * diff;
@@ -18,6 +23,10 @@ float RandomFloat(float a, float b) {
 
 int main()
 {
+    using Point2d = Eigen::Vector2d;
+    Triangle triangle(Point2d(15, 1), Point2d(-8,17), Point2d(29,67));
+    triangle.circleContainV(Point2d(-1, 0));
+    /*
 	srand (time(NULL));
 	float numberPoints = roundf(RandomFloat(4, 40));
 
@@ -46,52 +55,6 @@ int main()
 	std::cout << "\nEdges : " << edges.size() << std::endl;
 	for(auto &e : edges)
 		std::cout << e << std::endl;
-
-    /*
-	// SFML window
-    	sf::RenderWindow window(sf::VideoMode(800, 600), "Delaunay triangulation");
-
-	// Transform each points of each vector as a rectangle
-	std::vector<sf::RectangleShape*> squares;
-
-	for(auto p = begin(points); p != end(points); p++) {
-		sf::RectangleShape *c1 = new sf::RectangleShape(sf::Vector2f(4, 4));
-		c1->setPosition(p->x, p->y);
-		squares.push_back(c1);
-	}
-	
-	// Make the lines
-	std::vector<std::array<sf::Vertex, 2> > lines;
-	for(auto e = begin(edges); e != end(edges); e++) {
-		lines.push_back({{
-			sf::Vertex(sf::Vector2f((*e).p1.x + 2, (*e).p1.y + 2)),	
-			sf::Vertex(sf::Vector2f((*e).p2.x + 2, (*e).p2.y + 2))	
-		}});
-	}
- 
-	while (window.isOpen())
-	{
-	        sf::Event event;
-	        while (window.pollEvent(event))
-	        {
-	            if (event.type == sf::Event::Closed)
-	                window.close();
-	        }
-	
-	        window.clear();
-	
-		// Draw the squares
-		for(auto s = begin(squares); s != end(squares); s++) {
-			window.draw(**s);
-		}
-	
-		// Draw the lines
-		for(auto l = begin(lines); l != end(lines); l++) {
-			window.draw((*l).data(), 2, sf::Lines);
-		}
-	       	
-		window.display();
-	}
      */
 	
 	return 0;

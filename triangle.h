@@ -1,66 +1,125 @@
-#ifndef H_TRIANGLE
-#define H_TRIANGLE
+//
+// Created by lightol on 3/16/18.
+//
 
-#include "vector2.h"
+#ifndef DELAUNAY_TRIANGULATION_TRIANGLE_H
+#define DELAUNAY_TRIANGULATION_TRIANGLE_H
+
+#include "eigen3/Eigen/Eigen"
+
 #include "edge.h"
-
 #include <assert.h>
 #include <math.h>
 
-template <class T>
 class Triangle
 {
-	public:
-		using EdgeType = Edge<T>;
-		using VertexType = Vector2<T>;
-		
-		Triangle(const VertexType &_p1, const VertexType &_p2, const VertexType &_p3)
-		:	p1(_p1), p2(_p2), p3(_p3),
-			e1(_p1, _p2), e2(_p2, _p3), e3(_p3, _p1), isBad(false)
-		{}
-	
-		bool containsVertex(const VertexType &v)
-		{
-			return p1 == v || p2 == v || p3 == v; 
-		}
-		
-		bool circumCircleContains(const VertexType &v)
-		{
-			float ab = (p1.x * p1.x) + (p1.y * p1.y);
-			float cd = (p2.x * p2.x) + (p2.y * p2.y);
-			float ef = (p3.x * p3.x) + (p3.y * p3.y);
+public:
+    using Point2d = Eigen::Vector2d;
 
-			float circum_x = (ab * (p3.y - p2.y) + cd * (p1.y - p3.y) + ef * (p2.y - p1.y)) / (p1.x * (p3.y - p2.y) + p2.x * (p1.y - p3.y) + p3.x * (p2.y - p1.y)) / 2.f;
-			float circum_y = (ab * (p3.x - p2.x) + cd * (p1.x - p3.x) + ef * (p2.x - p1.x)) / (p1.y * (p3.x - p2.x) + p2.y * (p1.x - p3.x) + p3.y * (p2.x - p1.x)) / 2.f;
-			float circum_radius = sqrtf(((p1.x - circum_x) * (p1.x - circum_x)) + ((p1.y - circum_y) * (p1.y - circum_y)));
+    // constructor
+    Triangle() {}
+    Triangle(const Point2d &p1, const Point2d &p2, const Point2d &p3);
+    Triangle(const Triangle &triangle);
 
-			float dist = sqrtf(((v.x - circum_x) * (v.x - circum_x)) + ((v.y - circum_y) * (v.y - circum_y)));
-			return dist <= circum_radius;
-		}
-	
-		VertexType p1;
-		VertexType p2;
-		VertexType p3;
-		EdgeType e1;				
-		EdgeType e2;
-		EdgeType e3;
-		bool isBad;
+    // judge if this triangle contains the inquired Point2d
+    bool containPoint2d(const Point2d &Point2d) const
+    {
+        return (p1_ == Point2d || p2_ == Point2d || p3_ == Point2d);
+    }
+
+    // judge if the circumscribed circle of this triangle contains the inquired Point2d
+    bool circleContainV(const Point2d &v) const;
+
+    Point2d p1_;
+    Point2d p2_;
+    Point2d p3_;
+    Edge e1_;
+    Edge e2_;
+    Edge e3_;
+    bool isBad;
 };
 
-template <class T>
-inline std::ostream &operator << (std::ostream &str, const Triangle<T> & t)
+Triangle::Triangle(const Point2d &p1, const Point2d &p2, const Point2d &p3)
 {
-	return str << "Triangle:" << std::endl << "\t" << t.p1 << std::endl << "\t" << t.p2 << std::endl << "\t" << t.p3 << std::endl << "\t" << t.e1 << std::endl << "\t" << t.e2 << std::endl << "\t" << t.e3 << std::endl;
-		
+    p1_ = p1;
+    p2_ = p2;
+    p3_ = p3;
+    e1_ = Edge(p1, p2);
+    e2_ = Edge(p1, p3);
+    e3_ = Edge(p2, p3);
+    isBad = false;
 }
 
-template <class T>
-inline bool operator == (const Triangle<T> &t1, const Triangle<T> &t2)
+Triangle::Triangle(const Triangle &triangle)
 {
-	return	(t1.p1 == t2.p1 || t1.p1 == t2.p2 || t1.p1 == t2.p3) &&
-			(t1.p2 == t2.p1 || t1.p2 == t2.p2 || t1.p2 == t2.p3) && 
-			(t1.p3 == t2.p1 || t1.p3 == t2.p2 || t1.p3 == t2.p3);
+    p1_ = triangle.p1_;
+    p2_ = triangle.p2_;
+    p3_ = triangle.p3_;
+    e1_ = triangle.e1_;
+    e2_ = triangle.e2_;
+    e3_ = triangle.e3_;
+    isBad = false;
 }
 
+bool Triangle::circleContainV(const Point2d &v) const
+{
+    using std::cout;
+    using std::endl;
+    // step1: find the centre of the circumscribed circle, see figure 2
+    Point2d D = (p1_ + p2_)/2;
+    Point2d E = (p2_ + p3_)/2;
+    Eigen::Vector2d a = p2_ - p1_;
+    Eigen::Vector2d b = p3_ - p2_;
+//    cout << "p1 is " << p1_[0] << " " << p1_[1];
+//    cout << "\np2 is " << p2_[0] << " " << p2_[1];
+//    cout << "\np3 is " << p3_[0] << " " << p3_[1];
+//    cout << "\nD is " << D[0] << " " << D[1];
+//    cout << "\nE is " << E[0] << " " << E[1];
+    Eigen::Vector2d d = Point2d(-a[1], a[0]);
+    d.normalize();
+    Eigen::Vector2d e = Point2d(-b[1], b[0]);
+    e.normalize();
+//    cout << "\nd is " << d[0] << " " << d[1];
+//    cout << "\ne is " << e[0] << " " << e[1];
+    Eigen::Matrix2d de;
+    de << d[0], -e[0], d[1], -e[1];
+//    cout << "\nde is " << de;
+    Eigen::Vector2d xy = de.inverse()*(E - D);
+    Point2d centre = D + xy[0]*d;
+//    cout << "\ncenter is " << centre[0] << " " << centre[1];
 
-#endif
+    // step2: compute the distance from center to p1, p2 or p3
+    double radius = (p1_ - centre).norm();
+    cout << "radius is " << radius << (p2_ - centre).norm()
+         << " " << (p3_ -centre).norm() << endl;
+
+    // step3: judge if v is in this circle
+    if ((v - centre).norm() < radius)
+    {
+        return true;
+    }
+
+    return false;
+}
+
+inline std::ostream &operator << (std::ostream &str, const Triangle &triangle)
+{
+    str << "Triangle : [" << triangle.p1_ << ", " << triangle.p2_
+        << ", " << triangle.p3_ << "]\n";
+
+    return str;
+}
+
+inline bool operator == (const Triangle &tri1, const Triangle &tri2)
+{
+    if (tri1.p1_ == tri2.p1_ && tri1.p2_ == tri2.p2_ && tri1.p3_ == tri2.p3_ ||
+        tri1.p1_ == tri2.p2_ && tri1.p2_ == tri2.p3_ && tri1.p3_ == tri2.p1_ ||
+        tri1.p1_ == tri2.p3_ && tri1.p2_ == tri2.p1_ && tri1.p3_ == tri2.p2_)
+    {
+        return true;
+    }
+
+    return false;
+}
+
+#endif //DELAUNAY_TRIANGULATION_TRIANGLE_H

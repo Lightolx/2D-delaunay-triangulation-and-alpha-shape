@@ -1,35 +1,46 @@
-#ifndef H_EDGE
-#define H_EDGE
+//
+// Created by lightol on 3/16/18.
+//
 
-#include "vector2.h"
+#ifndef DELAUNAY_TRIANGULATION_EDGE_H
+#define DELAUNAY_TRIANGULATION_EDGE_H
 
-template <class T>
+#include "eigen3/Eigen/Eigen"
+
 class Edge
 {
-	public:
-		using VertexType = Vector2<T>;
-		
-		Edge(const VertexType &p1, const VertexType &p2) : p1(p1), p2(p2), isBad(false) {};
-		Edge(const Edge &e) : p1(e.p1), p2(e.p2), isBad(false) {};
+public:
+    using Point2d = Eigen::Vector2d;
 
-		VertexType p1;
-		VertexType p2;
+    // constructor
+    Edge() {}
 
-		bool isBad;
+    Edge(const Point2d &p1, const Point2d &p2):
+            p1_(p1), p2_(p2), isBad(false) {}
+
+    Edge(const Edge &edge):p1_(edge.p1_),
+            p2_(edge.p2_), isBad(edge.isBad) {}
+
+    Point2d p1_;
+    Point2d p2_;
+    bool isBad;
 };
 
-template <class T>
-inline std::ostream &operator << (std::ostream &str, Edge<T> const &e)
+inline std::ostream &operator << (std::ostream &str, const Edge &edge)
 {
-	return str << "Edge " << e.p1 << ", " << e.p2;
+    str << "Edge: [" << edge.p1_ << ", " << edge.p2_ << "]";
+    return str;
 }
 
-template <class T>
-inline bool operator == (const Edge<T> & e1, const Edge<T> & e2)
+inline bool operator == (const Edge &edge1, const Edge &edge2)
 {
-	return 	(e1.p1 == e2.p1 && e1.p2 == e2.p2) ||
-			(e1.p1 == e2.p2 && e1.p2 == e2.p1);
+    if (edge1.p1_ == edge2.p1_ && edge1.p2_ == edge2.p2_ ||
+        edge1.p1_ == edge2.p2_ && edge1.p2_ == edge2.p1_ )
+    {
+        return true;
+    }
+
+    return false;
 }
 
-#endif 
-
+#endif //DELAUNAY_TRIANGULATION_EDGE_H

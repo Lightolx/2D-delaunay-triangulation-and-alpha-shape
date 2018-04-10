@@ -14,17 +14,15 @@
 class Triangle
 {
 public:
-    using Point2d = Eigen::Vector2d;
-
     // constructor
     Triangle() {}
     Triangle(const Point2d &p1, const Point2d &p2, const Point2d &p3);
     Triangle(const Triangle &triangle);
 
     // judge if this triangle contains the inquired Point2d
-    bool containPoint2d(const Point2d &Point2d) const
+    bool containPoint2d(const Point2d &p) const
     {
-        return (p1_ == Point2d || p2_ == Point2d || p3_ == Point2d);
+        return (p1_ == p || p2_ == p || p3_ == p);
     }
 
     // judge if the circumscribed circle of this triangle contains the inquired Point2d
@@ -75,9 +73,9 @@ bool Triangle::circleContainV(const Point2d &v) const
 //    cout << "\np3 is " << p3_[0] << " " << p3_[1];
 //    cout << "\nD is " << D[0] << " " << D[1];
 //    cout << "\nE is " << E[0] << " " << E[1];
-    Eigen::Vector2d d = Point2d(-a[1], a[0]);
+    Eigen::Vector2d d = Point2d(-a[1], a[0]);   // d is orthogonal to a
     d.normalize();
-    Eigen::Vector2d e = Point2d(-b[1], b[0]);
+    Eigen::Vector2d e = Point2d(-b[1], b[0]);   // e is orthogonal to b
     e.normalize();
 //    cout << "\nd is " << d[0] << " " << d[1];
 //    cout << "\ne is " << e[0] << " " << e[1];
@@ -90,8 +88,6 @@ bool Triangle::circleContainV(const Point2d &v) const
 
     // step2: compute the distance from center to p1, p2 or p3
     double radius = (p1_ - centre).norm();
-    cout << "radius is " << radius << (p2_ - centre).norm()
-         << " " << (p3_ -centre).norm() << endl;
 
     // step3: judge if v is in this circle
     if ((v - centre).norm() < radius)
@@ -113,8 +109,11 @@ inline std::ostream &operator << (std::ostream &str, const Triangle &triangle)
 inline bool operator == (const Triangle &tri1, const Triangle &tri2)
 {
     if (tri1.p1_ == tri2.p1_ && tri1.p2_ == tri2.p2_ && tri1.p3_ == tri2.p3_ ||
+        tri1.p1_ == tri2.p1_ && tri1.p2_ == tri2.p3_ && tri1.p3_ == tri2.p2_ ||
         tri1.p1_ == tri2.p2_ && tri1.p2_ == tri2.p3_ && tri1.p3_ == tri2.p1_ ||
-        tri1.p1_ == tri2.p3_ && tri1.p2_ == tri2.p1_ && tri1.p3_ == tri2.p2_)
+        tri1.p1_ == tri2.p2_ && tri1.p2_ == tri2.p1_ && tri1.p3_ == tri2.p3_ ||
+        tri1.p1_ == tri2.p3_ && tri1.p2_ == tri2.p1_ && tri1.p3_ == tri2.p2_ ||
+        tri1.p1_ == tri2.p3_ && tri1.p2_ == tri2.p2_ && tri1.p3_ == tri2.p1_)
     {
         return true;
     }

@@ -14,14 +14,14 @@
 class DelaunayT
 {
 public:
-    using Point2d = Eigen::Vector2d;
-
     // constructor
     DelaunayT() {}
     DelaunayT(const std::vector<Point2d> &points);
 
     // triangulate all vertex into triangle meshes
     bool triangulate();
+
+    const std::vector<Edge> getEdges() const { return edges_;}
 
 private:
     std::vector<Triangle> triangles_;
@@ -37,14 +37,14 @@ DelaunayT::DelaunayT(const std::vector<Point2d> &points)
 
     if (!triangulate())
     {
-        std::cerr << "Delaunay this point cloud failed!";
+        std::cerr << "Failed to triangulate this point cloud!";
         abort();
     }
 }
 
 bool DelaunayT::triangulate()
 {
-    // Step1: determinate the super triangle
+    // Step1: Select a super triangle
     double Xmin = vertex_[0].x();
     double Xmax = Xmin;
     double Ymin = vertex_[0].y();
@@ -82,7 +82,7 @@ bool DelaunayT::triangulate()
     Point2d p2(Xmid, Ymid + 20*deltaMax);
     Point2d p3(Xmid + 20*deltaMax, Ymid - deltaMax);
 
-    std::cout << "Super triangle:\n" << Triangle(p1, p2, p3) << std::endl;
+//    std::cout << "Super triangle:\n" << Triangle(p1, p2, p3) << std::endl;
 
     // Step2: create a list of triangles
     // step2.1: add the super triangle into it
@@ -97,6 +97,18 @@ bool DelaunayT::triangulate()
 
         // step2.2: for each point and triangle, test if the point is in this triangle
         // if so, mark this triangle as influencing triangle
+        for (Triangle &triangle : triangles_)
+        {
+            if (triangle.circleContainV(p))
+            {
+                triangle.isBad = true;
+                polygon.push_back(triangle.e1_);
+                polygon.push_back(triangle.e2_);
+                polygon.push_back(triangle.e3_);
+            }
+        }
+
+        /*
         for (int i = 0; i < triangleNum; ++i)
         {
             if (triangles_[i].circleContainV(p))
@@ -112,7 +124,7 @@ bool DelaunayT::triangulate()
             {
                 std::cout << "does not contain " << p << " in his circumscribed circle\n";
             }
-        }
+        }*/
 
         // step2.3: remove all triangles whose circumscribe circle contains point
         triangles_.erase(std::remove_if(triangles_.begin(), triangles_.end(), [](Triangle &t)
@@ -126,9 +138,14 @@ bool DelaunayT::triangulate()
         // step2.4: remove the common edge of two influencing triangle
         for (int i = 0; i < polyNum; ++i)
         {
-            for (int j = 0; j < polyNum; ++j)
+            if (polygon[i].isCommon)
             {
-                if (i == j)
+                continue;
+            }
+
+            for (int j = i+1; j < polyNum; ++j)
+            {
+                if (polygon[j].isCommon)
                 {
                     continue;
                 }
@@ -136,15 +153,15 @@ bool DelaunayT::triangulate()
                 if (polygon[i] == polygon[j])
                 {
                     // it means that this edge belong to two bad triangle
-                    polygon[i].isBad = true;
-                    polygon[j].isBad = true;
+                    polygon[i].isCommon = true;
+                    polygon[j].isCommon = true;
                 }
             }
         }
 
         polygon.erase(std::remove_if(polygon.begin(), polygon.end(), [](Edge &edge)
         {
-            return edge.isBad;
+            return edge.isCommon;
         }
         ), polygon.end());
 
@@ -159,7 +176,7 @@ bool DelaunayT::triangulate()
     // Step3: remove the super triangle and triangles who contain the three virtual point
     triangles_.erase(std::remove_if(triangles_.begin(), triangles_.end(), [p1, p2, p3](Triangle &t)
     {
-        return t.circleContainV(p1) || t.circleContainV(p2) || t.circleContainV(p3);
+        return t.containPoint2d(p1) || t.containPoint2d(p2) || t.containPoint2d(p3);
     }
     ), triangles_.end());
 
@@ -173,6 +190,21 @@ bool DelaunayT::triangulate()
         edges_.push_back(t.e2_);
         edges_.push_back(t.e3_);
     }
+
+    return true;
+}
+
+inline std::ostream &operator << (std::ostream &str, const DelaunayT &delaunayT)
+{
+    std::vector<Edge> edges = delaunayT.getEdges();
+
+    for (const Edge &edge : edges)
+    {
+        str << edge.p1_.x() << " " << edge.p1_.y() << " "
+            << edge.p2_.x() << " " << edge.p2_.y() << std::endl;
+    }
+
+    return str;
 }
 
 #endif //DELAUNAY_TRIANGULATION_DELAUNAYT_H

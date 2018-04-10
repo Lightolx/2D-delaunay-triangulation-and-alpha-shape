@@ -7,23 +7,23 @@
 
 #include "eigen3/Eigen/Eigen"
 
+using Point2d = Eigen::Vector2d;
+
 class Edge
 {
 public:
-    using Point2d = Eigen::Vector2d;
-
     // constructor
     Edge() {}
 
     Edge(const Point2d &p1, const Point2d &p2):
-            p1_(p1), p2_(p2), isBad(false) {}
+            p1_(p1), p2_(p2), isCommon(false) {}
 
     Edge(const Edge &edge):p1_(edge.p1_),
-            p2_(edge.p2_), isBad(edge.isBad) {}
+            p2_(edge.p2_), isCommon(edge.isCommon) {}
 
     Point2d p1_;
     Point2d p2_;
-    bool isBad;
+    bool isCommon;
 };
 
 inline std::ostream &operator << (std::ostream &str, const Edge &edge)

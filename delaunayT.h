@@ -10,6 +10,7 @@
 
 #include "edge.h"
 #include "triangle.h"
+#include "cluster.h"
 
 using std::cout;
 using std::endl;
@@ -20,6 +21,7 @@ public:
     // constructor
     DelaunayT() {}
     DelaunayT(const std::vector<Point2d> &points);
+    DelaunayT(const DelaunayT &delaunayT);
 
     // triangulate all vertex into triangle meshes
     bool triangulate();
@@ -30,18 +32,28 @@ public:
 
     const std::vector<Edge> getBoundary() const { return boundary_;}
 
+    const std::vector<Triangle> getTri() const { return triangles_;}
+
     Triangle generateSuperTri();
 
     bool generateTriangles();
 
-    bool generateAlphaShape(double r);
+    bool generateAlphaShape();
+
+    bool isIntegrity() const;
+
+    // compute an appropriate R for digging out an alpha shape
+    void computeR();
+
+    void setR(double R) { R_ = R;}
+
 private:
     Triangle superTri_;
     std::vector<Triangle> triangles_;
     std::vector<Edge> edges_;
     std::vector<Point2d> vertex_;
     std::vector<Edge> boundary_;
-
+    double R_;   // the digging radius
 };
 
 DelaunayT::DelaunayT(const std::vector<Point2d> &points)
@@ -83,6 +95,9 @@ bool DelaunayT::triangulate()
 
     // Step4: Compute the edges and boundary
     computeEdges();
+
+    // Step5: Compute the appropriate digging radius;
+    computeR();
 
     return true;
 }
@@ -296,9 +311,83 @@ inline std::ostream &operator << (std::ostream &str, const DelaunayT &delaunayT)
     return str;
 }
 
-bool DelaunayT::generateAlphaShape(double r)
+bool DelaunayT::generateAlphaShape()
 {
-    // Step1: get a adaptive dig radius
+
+
+    // Step2: remove all boundary triangles whose circum raius is bigger than r
+    while(1)
+    {
+        int lastNum = triangles_.size();
+
+        triangles_.erase(std::remove_if(triangles_.begin(), triangles_.end(),
+                                        [r = R_](const Triangle &tri)
+                                        { return tri.isBoundary && (r < tri.radius_);}),
+                         triangles_.end());
+
+        computeEdges();    // reset triangle.isBoundary_
+
+        if (lastNum == triangles_.size())
+        {
+            break;
+        }
+    }
+}
+
+bool DelaunayT::isIntegrity() const
+{
+    int num = boundary_.size();
+
+    // Step0: initialize a cluster graph
+    CLGraph graph(num);
+
+    // Step1: find all cluster edges can help to construct the cluster graph
+    std::list<CLEdge> clEdges;
+    CLEdge linking;
+    for (int i = 0; i < num; ++i)
+    {
+        for (int j = i+1; j < num; ++j)
+        {
+            if (boundary_[i].meet(boundary_[j]))
+            {
+                linking.a_ = i;
+                linking.b_ = j;
+                clEdges.push_back(linking);
+            }
+        }
+    }
+
+    // Step2: with the help of all cluster edges, link all cluster node to different group
+    int a(0), b(0), clusterA(0), clusterB(0);
+    for (std::list<CLEdge>::iterator iter = clEdges.begin(); iter != clEdges.end(); iter++)
+    {
+        a = iter->a_;
+        b = iter->b_;
+        clusterA = graph.find(a);  // the bellwether ID of the group node a belong to
+        clusterB = graph.find(b);  // the bellwether ID of the group node b belong to
+
+        if (clusterA != clusterB)  // a and b isn't in the same group yet, i.e., their bellwether isn't the same one
+        {
+            graph.join(a, b);      // let a be b's bellwether or vise verse
+        }
+    }
+
+    return (graph.getNum() == 0);
+}
+
+DelaunayT::DelaunayT(const DelaunayT &delaunayT)
+{
+    superTri_ = delaunayT.superTri_;
+    triangles_.assign(delaunayT.triangles_.begin(), delaunayT.triangles_.end());
+    edges_.assign(delaunayT.edges_.begin(), delaunayT.edges_.end());
+    vertex_.assign(delaunayT.vertex_.begin(), delaunayT.vertex_.end());
+    boundary_.assign(delaunayT.boundary_.begin(), delaunayT.boundary_.end());
+    R_ = delaunayT.R_;
+}
+
+void DelaunayT::computeR()
+{
+    // Step1: get a rough boundary as: top == max(Radius), bottom == median(radius)
     std::vector<double> radius;           // inner triangles
     std::vector<double> Radius;           // boundary triangles
     radius.reserve(triangles_.size());
@@ -315,50 +404,49 @@ bool DelaunayT::generateAlphaShape(double r)
         }
     }
 
-//    for (auto r : Radius)
-//    {
-//        cout << r << endl;
-//    }
-//
-//    for (auto r : radius)
-//    {
-//        cout << "innner, " << r << endl;
-//    }
+    double maxR = *(std::max_element(Radius.begin(), Radius.end()));
+//    double minR = *(std::min_element(radius.begin(), radius.end()));
 
-    int maxR = *(std::max_element(radius.begin(), radius.end()));
     std::sort(radius.begin(), radius.end());
-    double radiusM = radius[radius.size()/2];  // median value of radius
-    std::sort(Radius.begin(), Radius.end());
-    double RadiusM = Radius[Radius.size()/2];
-    cout << RadiusM << " " << radiusM << " " << maxR;
+    double minR = radius[radius.size()/2];  // median value of radius
+//    std::sort(Radius.begin(), Radius.end());
+//    double RadiusM = Radius[Radius.size()/2];
+
+    R_ = maxR;                                 // initial digging radius
 
     while(1)
     {
-        int lastNum = triangles_.size();
-
-        triangles_.erase(std::remove_if(triangles_.begin(), triangles_.end(),
-                                        [r](const Triangle &tri)
-                                        { return tri.isBoundary && (r < tri.radius_);}),
-                         triangles_.end());
-
-        computeEdges();    // reset triangle.isBoundary_
-
-        if (lastNum == triangles_.size())
+        DelaunayT Delaunay(*this);
+        Delaunay.generateAlphaShape();
+        if (Delaunay.isIntegrity())
+        {
+            R_ = (R_ + minR) / 2;
+        }
+        else
         {
             break;
         }
     }
 
+    // Step2: find a fine boundary
+    double Br = R_;
+    double Tr = 2 * R_ - minR;         // R_ = (Tr + minR) / 2
+    R_ = 0.8 * Br + 0.2 * Tr;
 
-
-    int i = 0;
-    for (auto tri : triangles_)
+    while(1)
     {
-        i++;
-        if (tri.containEdge(boundary_[7]))
+        DelaunayT Delaunay(*this);
+        Delaunay.generateAlphaShape();
+        if (Delaunay.isIntegrity())
         {
             break;
         }
+        else
+        {
+            R_ = 0.8 * R_ + 0.2 * Tr;
+        }
     }
+
+    R_ *= 1.2;
 }
 #endif //DELAUNAY_TRIANGULATION_DELAUNAYT_H

@@ -3,4 +3,4 @@ project(delaunay_triangulation)
 
 set(CMAKE_CXX_STANDARD 11)
 
-add_executable(delaunay_triangulate main.cpp edge.h triangle.h delaunayT.h)
+add_executable(delaunay_triangulate main.cpp edge.h triangle.h delaunayT.h cluster.h)

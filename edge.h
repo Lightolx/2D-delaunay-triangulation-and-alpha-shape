@@ -24,6 +24,8 @@ public:
     Point2d p1_;
     Point2d p2_;
     bool isCommon;
+
+    bool meet(Edge edge) const;
 };
 
 inline std::ostream &operator << (std::ostream &str, const Edge &edge)
@@ -41,6 +43,12 @@ inline bool operator == (const Edge &edge1, const Edge &edge2)
     }
 
     return false;
+}
+
+bool Edge::meet(Edge edge) const
+{
+    return (edge.p1_ == p1_ || edge.p1_ == p2_ || edge.p2_ == p1_
+            || edge.p2_ == p2_) && !(edge == *this);
 }
 
 #endif //DELAUNAY_TRIANGULATION_EDGE_H

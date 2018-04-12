@@ -35,25 +35,15 @@ int main()
 
     fin.close();
 
-    /*std::ifstream fin1("pt.txt");
-    std::string ptline1;
-    double a, b, c, d;
-    std::vector<double> Ds;
-
-    while (getline(fin, ptline))
-    {
-        std::stringstream ss(ptline);
-        ss >> a >> b >> c >> d;
-        Ds.push_back(d);
-        std::cout << d << std::endl;
-    }
-
-    fin1.close();*/
-
     DelaunayT delaunayT(points);
-    delaunayT.generateAlphaShape(12);
+//    delaunayT.setR(8);
+    delaunayT.generateAlphaShape();
 
-    std::ofstream fout("/media/psf/Home/Documents/MATLAB_codes/delaunay/triangles.txt");
+    cout << "boundary size is: " << delaunayT.getBoundary().size() << endl;
+    cout << "edge size is: " << delaunayT.getEdges().size() << endl;
+    cout << "tri size is: " << delaunayT.getTri().size() << endl;
+
+    std::ofstream fout("/media/psf/Home/Documents/MATLAB_codes/delaunay/trianglesS.txt");
     fout << delaunayT;
     fout.close();
 	
